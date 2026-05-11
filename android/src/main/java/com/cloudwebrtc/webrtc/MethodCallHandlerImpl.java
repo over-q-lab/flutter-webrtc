@@ -206,7 +206,7 @@ public class MethodCallHandlerImpl implements MethodCallHandler, StateProvider {
     mPeerConnectionObservers.clear();
   }
   private void initialize(boolean bypassVoiceProcessing, int networkIgnoreMask, boolean forceSWCodec, List<String> forceSWCodecList,
-  @Nullable ConstraintsMap androidAudioConfiguration, Severity logSeverity, @Nullable Integer audioSampleRate, @Nullable Integer audioOutputSampleRate) {
+  @Nullable ConstraintsMap androidAudioConfiguration, Severity logSeverity, @Nullable Integer audioSampleRate, @Nullable Integer audioOutputSampleRate, boolean disableNetworkMonitor) {
     if (mFactory != null) {
       return;
     }
@@ -333,6 +333,7 @@ public class MethodCallHandlerImpl implements MethodCallHandler, StateProvider {
 
     final Options options = new Options();
     options.networkIgnoreMask = networkIgnoreMask;
+    options.disableNetworkMonitor = disableNetworkMonitor;
 
     final PeerConnectionFactory.Builder factoryBuilder = PeerConnectionFactory.builder()
             .setOptions(options);
@@ -447,7 +448,13 @@ public class MethodCallHandlerImpl implements MethodCallHandler, StateProvider {
           audioOutputSampleRate = constraintsMap.getInt("audioOutputSampleRate");
         }
 
-        initialize(enableBypassVoiceProcessing, networkIgnoreMask, forceSWCodec, forceSWCodecList, androidAudioConfiguration, logSeverity, audioSampleRate, audioOutputSampleRate);
+        boolean disableNetworkMonitor = false;
+        if (constraintsMap.hasKey("disableNetworkMonitor")
+                && constraintsMap.getType("disableNetworkMonitor") == ObjectType.Boolean) {
+            disableNetworkMonitor = constraintsMap.getBoolean("disableNetworkMonitor");
+        }
+
+        initialize(enableBypassVoiceProcessing, networkIgnoreMask, forceSWCodec, forceSWCodecList, androidAudioConfiguration, logSeverity, audioSampleRate, audioOutputSampleRate, disableNetworkMonitor);
         result.success(null);
         break;
       }
