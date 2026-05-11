@@ -293,7 +293,8 @@ static FlutterWebRTCPlugin *sharedSingleton;
 
 - (void)initialize:(NSArray*)networkIgnoreMask
     bypassVoiceProcessing:(BOOL)bypassVoiceProcessing
-                 severity:(RTCLoggingSeverity)severity {
+                 severity:(RTCLoggingSeverity)severity
+    disableNetworkMonitor:(BOOL)disableNetworkMonitor {
     // RTCSetMinDebugLogLevel(severity);
     [self initLoggerCallback:severity];
 
@@ -368,6 +369,7 @@ static FlutterWebRTCPlugin *sharedSingleton;
             }
         }
 
+        options.disableNetworkMonitor = disableNetworkMonitor;
         [_peerConnectionFactory setOptions: options];
     }
 }
@@ -390,8 +392,13 @@ static FlutterWebRTCPlugin *sharedSingleton;
       severity = [self str2LogSeverity:severityStr];
     }
 
+    BOOL disableNetworkMonitor = NO;
+    if (options[@"disableNetworkMonitor"] != nil) {
+        disableNetworkMonitor = ((NSNumber*)options[@"disableNetworkMonitor"]).boolValue;
+    }
+
     [self initialize:networkIgnoreMask bypassVoiceProcessing:enableBypassVoiceProcessing
-                     severity:severity];
+                     severity:severity disableNetworkMonitor:disableNetworkMonitor];
     result(@"");
   } else if ([@"createPeerConnection" isEqualToString:call.method]) {
     NSDictionary* argsMap = call.arguments;

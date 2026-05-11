@@ -5,21 +5,25 @@
 
 This is a fork of [cloudwebrtc/flutter-webrtc](https://github.com/cloudwebrtc/flutter-webrtc) with the following addition:
 
-### Added: `disableNetworkMonitor` option for Android
+### Added: `disableNetworkMonitor` option for Android and iOS
 
 **Problem:**  
 On Android, `libwebrtc`'s internal `AndroidNetworkMonitor` filters out hotspot interfaces (e.g. `ap0`) because the Android `ConnectivityManager` does not assign `NET_CAPABILITY_INTERNET` to them. As a result, ICE candidate collection for the hotspot interface is completely skipped, making P2P connections impossible when the Android device is acting as a Wi-Fi hotspot (tethering).
 
+On iOS, the Personal Hotspot bridge interface (`bridge100`) is similarly not collected as an ICE candidate, causing the host device to fall back to cellular (CGNAT) or IPv6 addresses. This results in unstable Safe/Unsafe judgments depending on whether the carrier provides IPv6 prefix delegation.
+
 Related issues: [flutter_webrtc #433](https://github.com/cloudwebrtc/flutter-webrtc/issues/433) (wontfix), [Chromium WebRTC Bug #7708](https://bugs.chromium.org/p/webrtc/issues/detail?id=7708)
 
 **Fix:**  
-Added a `disableNetworkMonitor` boolean option to `WebRTC.initialize()`. When set to `true`, `PeerConnectionFactory.Options.disableNetworkMonitor` is enabled, causing WebRTC to enumerate network interfaces directly via `getifaddrs()` (POSIX) instead of relying on `AndroidNetworkMonitor`. This makes hotspot interfaces visible to ICE candidate collection.
+Added a `disableNetworkMonitor` boolean option to `WebRTC.initialize()`. When set to `true`, `disableNetworkMonitor` is set on `PeerConnectionFactory` options, causing WebRTC to enumerate network interfaces directly via `getifaddrs()` (POSIX) instead of relying on the platform network monitor. This makes hotspot interfaces visible to ICE candidate collection on both Android and iOS.
 
-**Changed file:** `android/src/main/java/com/cloudwebrtc/webrtc/MethodCallHandlerImpl.java`
+**Changed files:**
+- Android: `android/src/main/java/com/cloudwebrtc/webrtc/MethodCallHandlerImpl.java`
+- iOS: `ios/Classes/FlutterWebRTCPlugin.m`
 
 **Usage (Dart):**
 ```dart
-if (Platform.isAndroid) {
+if (Platform.isAndroid || Platform.isIOS) {
   await WebRTC.initialize(options: {'disableNetworkMonitor': true});
 }
 ```
