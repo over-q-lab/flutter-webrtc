@@ -1,4 +1,27 @@
 # Flutter-WebRTC
+---
+
+## Fork Note (over-q-lab)
+
+This is a fork of [cloudwebrtc/flutter-webrtc](https://github.com/cloudwebrtc/flutter-webrtc) with the following addition:
+
+### Added: `disableNetworkMonitor` option for Android
+
+**Problem:**  
+On Android, `libwebrtc`'s internal `AndroidNetworkMonitor` filters out hotspot interfaces (e.g. `ap0`) because the Android `ConnectivityManager` does not assign `NET_CAPABILITY_INTERNET` to them. As a result, ICE candidate collection for the hotspot interface is completely skipped, making P2P connections impossible when the Android device is acting as a Wi-Fi hotspot (tethering).
+
+Related issues: [flutter_webrtc #433](https://github.com/cloudwebrtc/flutter-webrtc/issues/433) (wontfix), [Chromium WebRTC Bug #7708](https://bugs.chromium.org/p/webrtc/issues/detail?id=7708)
+
+**Fix:**  
+Added a `disableNetworkMonitor` boolean option to `WebRTC.initialize()`. When set to `true`, `PeerConnectionFactory.Options.disableNetworkMonitor` is enabled, causing WebRTC to enumerate network interfaces directly via `getifaddrs()` (POSIX) instead of relying on `AndroidNetworkMonitor`. This makes hotspot interfaces visible to ICE candidate collection.
+
+**Changed file:** `android/src/main/java/com/cloudwebrtc/webrtc/MethodCallHandlerImpl.java`
+
+**Usage (Dart):**
+```dart
+if (Platform.isAndroid) {
+  await WebRTC.initialize(options: {'disableNetworkMonitor': true});
+}
 
 [![Financial Contributors on Open Collective](https://opencollective.com/flutter-webrtc/all/badge.svg?label=financial+contributors)](https://opencollective.com/flutter-webrtc) [![pub package](https://img.shields.io/pub/v/flutter_webrtc.svg)](https://pub.dartlang.org/packages/flutter_webrtc) [![Gitter](https://badges.gitter.im/flutter-webrtc/Lobby.svg)](https://gitter.im/flutter-webrtc/Lobby?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge) [![slack](https://img.shields.io/badge/join-us%20on%20slack-gray.svg?longCache=true&logo=slack&colorB=brightgreen)](https://join.slack.com/t/flutterwebrtc/shared_invite/zt-q83o7y1s-FExGLWEvtkPKM8ku_F8cEQ)
 
