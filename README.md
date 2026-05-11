@@ -10,23 +10,24 @@ This is a fork of [cloudwebrtc/flutter-webrtc](https://github.com/cloudwebrtc/fl
 **Problem:**  
 On Android, `libwebrtc`'s internal `AndroidNetworkMonitor` filters out hotspot interfaces (e.g. `ap0`) because the Android `ConnectivityManager` does not assign `NET_CAPABILITY_INTERNET` to them. As a result, ICE candidate collection for the hotspot interface is completely skipped, making P2P connections impossible when the Android device is acting as a Wi-Fi hotspot (tethering).
 
-On iOS, the Personal Hotspot bridge interface (`bridge100`) is similarly not collected as an ICE candidate, causing the host device to fall back to cellular (CGNAT) or IPv6 addresses. This results in unstable Safe/Unsafe judgments depending on whether the carrier provides IPv6 prefix delegation.
-
 Related issues: [flutter_webrtc #433](https://github.com/cloudwebrtc/flutter-webrtc/issues/433) (wontfix), [Chromium WebRTC Bug #7708](https://bugs.chromium.org/p/webrtc/issues/detail?id=7708)
 
-**Fix:**  
-Added a `disableNetworkMonitor` boolean option to `WebRTC.initialize()`. When set to `true`, `disableNetworkMonitor` is set on `PeerConnectionFactory` options, causing WebRTC to enumerate network interfaces directly via `getifaddrs()` (POSIX) instead of relying on the platform network monitor. This makes hotspot interfaces visible to ICE candidate collection on both Android and iOS.
+**Fix (Android — confirmed working):**  
+Added a `disableNetworkMonitor` boolean option to `WebRTC.initialize()`. When set to `true`, `PeerConnectionFactory.Options.disableNetworkMonitor` is enabled, causing WebRTC to enumerate network interfaces directly via `getifaddrs()` (POSIX) instead of relying on `AndroidNetworkMonitor`. This makes hotspot interfaces (e.g. `ap0`) visible to ICE candidate collection.
 
-**Changed files:**
-- Android: `android/src/main/java/com/cloudwebrtc/webrtc/MethodCallHandlerImpl.java`
-- iOS: `ios/Classes/FlutterWebRTCPlugin.m`
+**Changed file:** `android/src/main/java/com/cloudwebrtc/webrtc/MethodCallHandlerImpl.java`
 
 **Usage (Dart):**
 ```dart
-if (Platform.isAndroid || Platform.isIOS) {
+if (Platform.isAndroid) {
   await WebRTC.initialize(options: {'disableNetworkMonitor': true});
 }
 ```
+
+---
+
+**iOS note (implementation retained for compatibility, no practical effect):**  
+The same `disableNetworkMonitor` option is also wired into the iOS implementation (`common/darwin/Classes/FlutterWebRTCPlugin.m`). However, testing confirmed that the Personal Hotspot bridge interface (`bridge100` / `172.20.10.1`) is **not exposed to apps via `getifaddrs()` on iOS**, regardless of this setting. This appears to be an iOS sandbox restriction at the OS level, not a WebRTC network monitor issue. As a result, enabling `disableNetworkMonitor` on iOS has no observable effect on ICE candidate collection for hotspot interfaces.
 
 [![Financial Contributors on Open Collective](https://opencollective.com/flutter-webrtc/all/badge.svg?label=financial+contributors)](https://opencollective.com/flutter-webrtc) [![pub package](https://img.shields.io/pub/v/flutter_webrtc.svg)](https://pub.dartlang.org/packages/flutter_webrtc) [![Gitter](https://badges.gitter.im/flutter-webrtc/Lobby.svg)](https://gitter.im/flutter-webrtc/Lobby?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge) [![slack](https://img.shields.io/badge/join-us%20on%20slack-gray.svg?longCache=true&logo=slack&colorB=brightgreen)](https://join.slack.com/t/flutterwebrtc/shared_invite/zt-q83o7y1s-FExGLWEvtkPKM8ku_F8cEQ)
 
